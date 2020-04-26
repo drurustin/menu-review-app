@@ -1,11 +1,22 @@
 let restaurant;
 var newMap;
 
+function registerServiceWorker(){
+  if (!'serviceWorker' in navigator) return;
+  navigator.serviceWorker.register('/sw.js').then((reg) => {
+    return;
+  })
+  .catch((error) => {
+    console.log(`Service worker failed to register: ${error}`);
+  });
+}
+
 /**
  * Initialize map as soon as the page is loaded.
  */
 document.addEventListener('DOMContentLoaded', (event) => {  
   initMap();
+  registerServiceWorker();
 });
 
 /**
@@ -22,7 +33,7 @@ initMap = () => {
         scrollWheelZoom: false
       });
       L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.jpg70?access_token={mapboxToken}', {
-        mapboxToken: '<your MAPBOX API KEY HERE>',
+        mapboxToken: config.api_key,
         maxZoom: 18,
         attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
           '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
@@ -34,22 +45,6 @@ initMap = () => {
     }
   });
 }  
- 
-/* window.initMap = () => {
-  fetchRestaurantFromURL((error, restaurant) => {
-    if (error) { // Got an error!
-      console.error(error);
-    } else {
-      self.map = new google.maps.Map(document.getElementById('map'), {
-        zoom: 16,
-        center: restaurant.latlng,
-        scrollwheel: false
-      });
-      fillBreadcrumb();
-      DBHelper.mapMarkerForRestaurant(self.restaurant, self.map);
-    }
-  });
-} */
 
 /**
  * Get current restaurant from page URL.
@@ -89,6 +84,7 @@ fillRestaurantHTML = (restaurant = self.restaurant) => {
   const image = document.getElementById('restaurant-img');
   image.className = 'restaurant-img'
   image.src = DBHelper.imageUrlForRestaurant(restaurant);
+  image.setAttribute('alt', restaurant.name);
 
   const cuisine = document.getElementById('restaurant-cuisine');
   cuisine.innerHTML = restaurant.cuisine_type;
@@ -149,19 +145,23 @@ fillReviewsHTML = (reviews = self.restaurant.reviews) => {
 createReviewHTML = (review) => {
   const li = document.createElement('li');
   const name = document.createElement('p');
+  name.classList.add('name');
   name.innerHTML = review.name;
   li.appendChild(name);
 
-  const date = document.createElement('p');
+  const date = document.createElement('span');
   date.innerHTML = review.date;
-  li.appendChild(date);
+  date.classList.add('date');
+  name.appendChild(date);
 
   const rating = document.createElement('p');
+  rating.classList.add('rating');
   rating.innerHTML = `Rating: ${review.rating}`;
   li.appendChild(rating);
 
   const comments = document.createElement('p');
   comments.innerHTML = review.comments;
+  comments.classList.add('comments');
   li.appendChild(comments);
 
   return li;
@@ -191,4 +191,18 @@ getParameterByName = (name, url) => {
   if (!results[2])
     return '';
   return decodeURIComponent(results[2].replace(/\+/g, ' '));
+}
+
+/**
+ * Register service worker
+ */
+
+function registerServiceWorker(){
+  /* Avoid errors in older browsers */
+  if (!'serviceWorker' in navigator) return;
+  navigator.serviceWorker.register('/sw.js')
+    .then( function(registration){
+      return console.log('Registered ' + registration);
+    })
+    .catch((err) => console.log('service worker not registered'));
 }

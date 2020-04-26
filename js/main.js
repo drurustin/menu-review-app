@@ -5,12 +5,28 @@ var newMap
 var markers = []
 
 /**
+ * Register service worker
+ */
+
+function registerServiceWorker(){
+  if (!'serviceWorker' in navigator) return;
+  navigator.serviceWorker.register('/sw.js').then((reg) => {
+    return;
+  })
+  .catch((error) => {
+    console.log(`Service worker failed to register: ${error}`);
+  });
+}
+
+
+/**
  * Fetch neighborhoods and cuisines as soon as the page is loaded.
  */
-document.addEventListener('DOMContentLoaded', (event) => {
+document.addEventListener('DOMContentLoaded', (event) => { 
   initMap(); // added 
   fetchNeighborhoods();
   fetchCuisines();
+  registerServiceWorker();
 });
 
 /**
@@ -71,6 +87,7 @@ fillCuisinesHTML = (cuisines = self.cuisines) => {
 /**
  * Initialize leaflet map, called from HTML.
  */
+
 initMap = () => {
   self.newMap = L.map('map', {
         center: [40.722216, -73.987501],
@@ -78,7 +95,7 @@ initMap = () => {
         scrollWheelZoom: false
       });
   L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.jpg70?access_token={mapboxToken}', {
-    mapboxToken: 'AIzaSyCvxqQjYYVFl9L5ypzpZfp-zv2DZ-f3WuY',
+    mapboxToken: config.api_key,
     maxZoom: 18,
     attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
       '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
@@ -88,18 +105,6 @@ initMap = () => {
 
   updateRestaurants();
 }
-/* window.initMap = () => {
-  let loc = {
-    lat: 40.722216,
-    lng: -73.987501
-  };
-  self.map = new google.maps.Map(document.getElementById('map'), {
-    zoom: 12,
-    center: loc,
-    scrollwheel: false
-  });
-  updateRestaurants();
-} */
 
 /**
  * Update page and map for current restaurants.
@@ -113,6 +118,14 @@ updateRestaurants = () => {
 
   const cuisine = cSelect[cIndex].value;
   const neighborhood = nSelect[nIndex].value;
+
+  // Update selected option state in select menu for accessibility
+  Array.from(nSelect.querySelectorAll('[selected]')).forEach(function(item){
+    // Remove selected attribute from previous selection
+    item.removeAttribute('selected');
+  });
+  nSelect[nIndex].setAttribute('selected', 'selected');
+  cSelect[nIndex].setAttribute('selected', 'selected');
 
   DBHelper.fetchRestaurantByCuisineAndNeighborhood(cuisine, neighborhood, (error, restaurants) => {
     if (error) { // Got an error!
@@ -159,26 +172,37 @@ createRestaurantHTML = (restaurant) => {
   const li = document.createElement('li');
 
   const image = document.createElement('img');
+
+  const infoWrapper = document.createElement('div');
+  infoWrapper.classList.add("restaurant-info");
+  
+  const imgWrapper = document.createElement('div');
+  imgWrapper.classList.add('img-wrapper');
   image.className = 'restaurant-img';
   image.src = DBHelper.imageUrlForRestaurant(restaurant);
-  li.append(image);
+  image.setAttribute('alt', restaurant.name);
+  imgWrapper.append(image);
+  li.append(imgWrapper);
 
-  const name = document.createElement('h1');
+  const name = document.createElement('h3');
   name.innerHTML = restaurant.name;
-  li.append(name);
+  infoWrapper.append(name);
 
   const neighborhood = document.createElement('p');
+  neighborhood.classList.add('neighborhood');
   neighborhood.innerHTML = restaurant.neighborhood;
-  li.append(neighborhood);
+  infoWrapper.append(neighborhood);
 
   const address = document.createElement('p');
   address.innerHTML = restaurant.address;
-  li.append(address);
+  infoWrapper.append(address);
 
   const more = document.createElement('a');
   more.innerHTML = 'View Details';
   more.href = DBHelper.urlForRestaurant(restaurant);
-  li.append(more)
+  infoWrapper.append(more)
+
+  li.append(infoWrapper);
 
   return li
 }
@@ -197,15 +221,4 @@ addMarkersToMap = (restaurants = self.restaurants) => {
     self.markers.push(marker);
   });
 
-} 
-/* addMarkersToMap = (restaurants = self.restaurants) => {
-  restaurants.forEach(restaurant => {
-    // Add marker to the map
-    const marker = DBHelper.mapMarkerForRestaurant(restaurant, self.map);
-    google.maps.event.addListener(marker, 'click', () => {
-      window.location.href = marker.url
-    });
-    self.markers.push(marker);
-  });
-} */
-
+}
